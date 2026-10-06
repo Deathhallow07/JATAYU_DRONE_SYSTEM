@@ -1,0 +1,21 @@
+node_modules/
+dist/
+__pycache__/
+*.pyc
+Python/.env
+Front/.env
+Back/server.key
+Back/server.cert
+logs/
+demo_runs/
+
+# Ultralytics downloads the MobileCLIP text encoder (242 MB) into the working
+# directory the first time YOLOE's text prompts are embedded. Demo.sh runs the
+# ingest from the project root, so it lands here and is reused after that.
+mobileclip2_b.ts
+
+# Too large for GitHub (100 MB limit) / generated run output — kept on disk only.
+mission_logs/
+pipeline/epoch_003.pth
+pipeline/1xzoom1.5ms20m/fcb-20260912-092817.mp4
+scripts/segformer/segformer_b3_multidataset/stage3_uavid/model.safetensors

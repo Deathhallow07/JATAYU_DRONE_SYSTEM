@@ -1,0 +1,28 @@
+{
+  "stage": "stage3_uavid",
+  "datasets": [
+    "uavid"
+  ],
+  "init_from": "./segformer_b3_multidataset/stage2_loveda",
+  "epoch": 64,
+  "mean_iou": 0.6389835635830247,
+  "surface_iou": 0.7365391694635018,
+  "traversability_iou": 0.812834008646846,
+  "selection_metric": 0.7225314555360275,
+  "class_names": [
+    "Ignore",
+    "Road",
+    "Pavement",
+    "Soil",
+    "Grass",
+    "Tree",
+    "Vegetation",
+    "Building",
+    "Vehicle",
+    "Person",
+    "Pole",
+    "Wall",
+    "Water",
+    "Rubble"
+  ]
+}

@@ -1,0 +1,23 @@
+# Producers (watcher + workers).
+python-socketio[client]>=5.11
+requests>=2.31
+opencv-python>=4.9
+numpy>=1.24
+
+# Only needed for the REAL model backends; the stub backends run without them.
+#   depth_worker.py --backend dav2
+#   seg_worker.py   --backend segformer
+# torch>=2.2
+# transformers>=4.40
+# pillow>=10.0
+
+# Telemetry producer (telem_worker.py). Without it the console falls back to
+# the mission log's GPS track and shows NO TELEM in the system panel.
+pymavlink>=2.4.41
+
+# Live single-script runs (mission_run.py). It needs ultralytics AND
+# python-socketio in the SAME interpreter — on this machine those are in
+# different conda envs, so install into whichever one you point RUN_PY at:
+#   ~/miniconda3/envs/work_env/bin/pip install "python-socketio[client]"
+# ultralytics>=8.3
+# torch>=2.2          # only for --reid (the appearance stage)

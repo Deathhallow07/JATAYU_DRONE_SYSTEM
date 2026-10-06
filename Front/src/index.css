@@ -1,0 +1,1039 @@
+/* Design tokens — keep in sync with src/theme.ts */
+:root {
+  --bg: #000000;
+  --surface-0: #0a0a0a;
+  --surface-1: #141414;
+  --surface-2: #1c1c1c;
+  --surface-3: #262626;
+  --border: #242424;
+
+  --primary: #2b4d5c;
+  --primary-hover: #39647a;
+  --accent: #4fc3f7;
+
+  --success: #00e676;
+  --danger: #ff1744;
+  --warning: #ffb300;
+
+  --text: #f2f4f6;
+  --text-dim: #8a929a;
+  --text-faint: #4a5158;
+
+  --radius: 8px;
+  --radius-lg: 12px;
+  --mono: ui-monospace, "Cascadia Code", "Fira Code", monospace;
+
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+}
+
+#root { height: 100dvh; }
+
+::-webkit-scrollbar { width: 9px; height: 9px; }
+::-webkit-scrollbar-track { background: var(--surface-0); }
+::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: var(--primary); }
+
+/* ── Console shell ─────────────────────────────────────────────────────── */
+
+.console {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  background: var(--bg);
+}
+
+/* The dashboard grid. Named areas so the layout is legible here rather than
+   scattered across a dozen grid-column declarations in the components.
+
+   Casualties left, map centre, system + notifications right. The map is the
+   widest track because it is the thing being read from across a tent; the
+   right column is sized to its content (a table of readouts) rather than
+   competing for space with the map. */
+.dash {
+  flex: 1;
+  display: grid;
+  gap: 2px;
+  padding: 2px;
+  background: var(--border);
+  min-height: 0;
+  grid-template-columns: minmax(280px, 0.95fr) minmax(0, 2.6fr) minmax(300px, 1fr);
+  grid-template-rows: minmax(0, 1.25fr) minmax(0, 1fr);
+  grid-template-areas:
+    "gids map system"
+    "gids map notify";
+}
+
+/* Raw feeds take a strip under the map. The map keeps the majority of the
+   centre column — opening the feeds is meant to add context, not to replace
+   the thing the operator is navigating by. */
+.dash.raw-open {
+  grid-template-rows: minmax(0, 1.25fr) minmax(0, 1fr) minmax(190px, 0.95fr);
+  grid-template-areas:
+    "gids map    system"
+    "gids map    notify"
+    "gids raw    notify";
+}
+
+/* One feed open, and it is being read against the map beside it — split the
+   centre column into two equal rows instead of leaving the map with the
+   majority. Both panes are one row of the same track, so they are exactly the
+   same height rather than nearly so. */
+.dash.raw-open.raw-solo {
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "gids map    system"
+    "gids raw    notify";
+}
+
+@media (max-width: 1500px) {
+  .dash {
+    grid-template-columns: minmax(250px, 0.9fr) minmax(0, 2fr) minmax(260px, 0.95fr);
+  }
+}
+
+@media (max-width: 1150px) {
+  .dash {
+    grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr);
+    grid-template-rows: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "gids   map"
+      "system map"
+      "notify notify";
+  }
+  .dash.raw-open {
+    grid-template-rows: minmax(0, 1.4fr) minmax(0, 1fr) minmax(190px, 1fr) minmax(0, 1fr);
+    grid-template-areas:
+      "gids   map"
+      "system map"
+      "raw    raw"
+      "notify notify";
+  }
+  /* The map spans the first two rows here, so matching it takes 2fr. The
+     areas are restated because the unprefixed .raw-solo rule above is more
+     specific than .dash.raw-open and would otherwise keep its three columns. */
+  .dash.raw-open.raw-solo {
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr) minmax(190px, 2fr) minmax(0, 1fr);
+    grid-template-areas:
+      "gids   map"
+      "system map"
+      "raw    raw"
+      "notify notify";
+  }
+}
+
+@media (max-width: 860px) {
+  .dash, .dash.raw-open, .dash.raw-open.raw-solo {
+    grid-template-columns: 1fr;
+    grid-template-rows: none;
+    /* A DEFINITE track height, not auto. The frame panes fit their image with
+       max-height: 100%, and a percentage height against an auto-sized row
+       resolves to nothing — the image then renders at natural size and spills
+       out of the pane. Each pane scrolls internally instead. */
+    grid-auto-rows: 52dvh;
+    grid-template-areas: "map" "gids" "notify" "system" "raw";
+    overflow-y: auto;
+  }
+  .area-map { min-height: 46dvh; }
+}
+
+.area-gids   { grid-area: gids; }
+.area-map    { grid-area: map; }
+.area-system { grid-area: system; }
+.area-notify { grid-area: notify; }
+.area-raw    { grid-area: raw; }
+.area-drawer { grid-area: drawer; }
+
+/* ── Top bar ───────────────────────────────────────────────────────────── */
+
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  min-height: 42px;
+  background: var(--surface-0);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.topbar-title {
+  font-weight: 800;
+  letter-spacing: 0.22em;
+  font-size: 0.72rem;
+}
+
+.feed-toggles {
+  display: flex;
+  gap: 4px;
+  padding-right: 6px;
+  margin-right: 2px;
+  border-right: 1px solid var(--border);
+}
+
+/* ── Map ───────────────────────────────────────────────────────────────── */
+
+.map-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: var(--surface-0);
+}
+
+.map-canvas { position: absolute; inset: 0; }
+
+/* Mapbox paints its own light chrome; force the dark console palette on the
+   bits of it that show through. */
+.map-wrap .mapboxgl-ctrl-group { background: var(--surface-1); border: 1px solid var(--border); }
+.map-wrap .mapboxgl-ctrl-group button + button { border-top: 1px solid var(--border); }
+.map-wrap .mapboxgl-ctrl-icon { filter: invert(0.85); }
+.map-wrap .mapboxgl-ctrl-scale {
+  background: rgb(0 0 0 / 55%);
+  border-color: var(--text-faint);
+  color: var(--text-dim);
+  font-family: var(--mono);
+  font-size: 0.6rem;
+}
+
+.map-controls {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 2;
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+  max-width: calc(100% - 70px);
+}
+
+.map-controls .btn {
+  background: rgb(10 10 10 / 88%);
+  backdrop-filter: blur(3px);
+}
+
+.map-legend {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  z-index: 2;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: var(--radius);
+  background: rgb(10 10 10 / 88%);
+  border: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.map-legend span { display: inline-flex; align-items: center; gap: 5px; }
+
+.map-waiting {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 0 20px;
+  pointer-events: none;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  background: rgb(0 0 0 / 45%);
+}
+
+/* ── Raw feeds strip ───────────────────────────────────────────────────── */
+
+.raw-feeds {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 2px;
+  min-height: 0;
+  min-width: 0;
+  background: var(--border);
+}
+
+@media (max-width: 860px) {
+  .raw-feeds {
+    grid-auto-flow: row;
+    grid-auto-columns: none;
+    grid-auto-rows: minmax(180px, 1fr);
+  }
+}
+
+/* ── System pane ───────────────────────────────────────────────────────── */
+
+.sys {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  padding: 4px 0 10px;
+}
+
+.sys-group {
+  padding: 10px 10px 4px;
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+.sys-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 10px;
+}
+.sys-row:hover { background: var(--surface-2); }
+
+.sys-k { color: var(--text-faint); }
+.sys-v { color: var(--text); text-align: right; overflow-wrap: anywhere; }
+
+.sys-bar {
+  height: 4px;
+  margin: 2px 10px 6px;
+  border-radius: 2px;
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.sys-bar span { display: block; height: 100%; transition: width 0.4s linear; }
+
+.sys-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  margin: 6px 8px 2px;
+  padding: 7px 9px;
+  border-radius: var(--radius);
+  background: rgb(255 23 68 / 10%);
+  border: 1px solid rgb(255 23 68 / 35%);
+  color: var(--danger);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  font-size: 0.62rem;
+}
+.sys-banner span {
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--text-dim);
+  font-size: 0.62rem;
+  line-height: 1.5;
+}
+
+/* ── Notifications ─────────────────────────────────────────────────────── */
+
+.notice-list { display: flex; flex-direction: column; gap: 2px; padding: 2px; }
+
+.notice {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 9px;
+  background: var(--surface-2);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius);
+}
+
+.notice.clickable { cursor: pointer; }
+.notice.clickable:hover { background: var(--surface-3); }
+
+/* A casualty is the only thing worth pulling the eye across the tent for. */
+.notice-found { background: rgb(0 230 118 / 8%); }
+.notice-problem { background: rgb(255 23 68 / 8%); }
+
+.notice-thumb {
+  width: 30px;
+  height: 42px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--surface-0);
+  display: block;
+}
+
+.notice-tag {
+  font-family: var(--mono);
+  font-size: 0.54rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  width: 30px;
+  text-align: center;
+  overflow-wrap: anywhere;
+  line-height: 1.25;
+}
+
+.notice-body { min-width: 0; }
+
+.notice-text {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.notice-detail {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+}
+
+.notice-time {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  color: var(--text-faint);
+  white-space: nowrap;
+  align-self: flex-start;
+}
+
+/* ── Log drawer ────────────────────────────────────────────────────────── */
+
+.log-drawer { width: min(760px, 100%); }
+.log-drawer .pane { height: 100%; }
+
+/* ── Pane chrome ───────────────────────────────────────────────────────── */
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-1);
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.pane-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  min-height: 34px;
+  background: var(--surface-0);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.pane-title {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.pane-sub {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  color: var(--text-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pane-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+}
+
+.pane-body.column {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pane-body.column > .grow {
+  flex: 1;
+  min-height: 0;
+}
+
+.pane-body.column > .fixed {
+  flex-shrink: 0;
+}
+
+.pane-body.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.spacer { flex: 1; }
+
+/* ── Controls ──────────────────────────────────────────────────────────── */
+
+.btn {
+  font: inherit;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 9px;
+  min-height: 24px;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+.btn:hover:not(:disabled) { background: var(--surface-3); color: var(--text); }
+.btn.active { background: var(--primary); color: var(--text); border-color: var(--primary-hover); }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+select.btn { text-transform: none; letter-spacing: 0; }
+
+.chip {
+  font-family: var(--mono);
+  font-size: 0.6rem;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+/* ── Status bar ────────────────────────────────────────────────────────── */
+
+.statusbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  min-height: 34px;
+  background: var(--surface-0);
+  border-top: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--text-dim);
+  flex-shrink: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.statusbar .sep { width: 1px; height: 16px; background: var(--border); flex-shrink: 0; }
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+/* ── Log pane ──────────────────────────────────────────────────────────── */
+
+.log {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  line-height: 1.5;
+  padding: 6px 0;
+}
+
+.log-row {
+  display: flex;
+  gap: 8px;
+  padding: 0 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.log-row:hover { background: var(--surface-2); }
+
+.log-level {
+  flex-shrink: 0;
+  width: 46px;
+  text-align: right;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.log-msg { flex: 1; min-width: 0; color: var(--text); opacity: 0.88; }
+.log-msg mark { background: var(--warning); color: #000; border-radius: 2px; }
+
+/* ── GID pane ──────────────────────────────────────────────────────────── */
+
+/* Ground-truth coordinate search, above the casualty list. A strip rather
+   than a dialog: it is used while reading the cards underneath it, comparing a
+   surveyed position against what the pipeline reported. */
+.gid-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-1);
+}
+
+.gid-search .coord-input {
+  flex: 1;
+  min-width: 120px;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+.gid-search-note {
+  flex-basis: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.62rem;
+  color: var(--text-dim);
+}
+
+/* The winning GID and its miss distance, as one clickable readout. */
+.gid-search .match-hit {
+  display: inline-flex;
+  gap: 6px;
+  letter-spacing: 0.04em;
+}
+
+.gid-search .probe-echo {
+  color: var(--text-faint);
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gid-list { display: flex; flex-direction: column; gap: 2px; padding: 2px; }
+
+/* The card the searched coordinate resolved to. Outlined rather than filled,
+   so it stays distinct from the selected card underneath it. */
+.gid-card.match { outline: 1px solid var(--success); outline-offset: -1px; }
+
+
+.gid-card {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 10px;
+  padding: 8px;
+  background: var(--surface-2);
+  border-left: 3px solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  border-top: none; border-right: none; border-bottom: none;
+  transition: background 0.12s;
+  width: 100%;
+}
+.gid-card:hover { background: var(--surface-3); }
+.gid-card.selected { background: var(--surface-3); }
+
+.gid-thumb {
+  width: 54px;
+  height: 78px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--surface-0);
+  display: block;
+}
+
+.gid-thumb.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  color: var(--text-faint);
+}
+
+.gid-meta {
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  color: var(--text-dim);
+  line-height: 1.55;
+  min-width: 0;
+}
+
+.gid-meta .row { display: flex; justify-content: space-between; gap: 8px; }
+.gid-meta .k { color: var(--text-faint); }
+.gid-meta .v { color: var(--text); overflow: hidden; text-overflow: ellipsis; }
+
+/* New arrivals flash once — on a wall display the operator is not watching the
+   pane continuously, and a silent insert into a scrolling list is missable. */
+@keyframes gid-in {
+  from { background: var(--primary); }
+  to   { background: var(--surface-2); }
+}
+.gid-card.fresh { animation: gid-in 1.4s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .gid-card.fresh { animation: none; }
+}
+
+/* ── Frame panes ───────────────────────────────────────────────────────── */
+
+.frame-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #000;
+}
+
+/* Fills .frame-inner, which is already the right shape and already clamped to
+   the pane — so the image needs no constraints of its own. */
+.frame-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.frame-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  cursor: crosshair;
+}
+
+.empty-state {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--text-faint);
+  text-align: center;
+  padding: 24px;
+  line-height: 1.7;
+}
+
+.empty-state code {
+  display: block;
+  margin-top: 10px;
+  color: var(--text-dim);
+  background: var(--surface-2);
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  font-size: 0.66rem;
+  white-space: pre-wrap;
+  word-break: break-all;
+  text-align: left;
+}
+
+/* ── Detail drawer ─────────────────────────────────────────────────────── */
+
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgb(0 0 0 / 66%);
+  z-index: 20;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.drawer {
+  width: min(560px, 100%);
+  height: 100%;
+  background: var(--surface-1);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+.crop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(62px, 1fr));
+  gap: 4px;
+  padding: 8px;
+}
+
+.crop-grid img {
+  width: 100%;
+  aspect-ratio: 1 / 2;
+  object-fit: cover;
+  border-radius: 4px;
+  background: var(--surface-0);
+}
+
+.kv {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 2px 10px;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  padding: 10px;
+}
+.kv dt { color: var(--text-faint); }
+.kv dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+
+/* Shrink-to-fit box around a worker frame — see FrameView for why the overlay
+   is anchored to the image rather than to the pane. */
+.frame-inner {
+  position: relative;
+  line-height: 0;
+  max-width: 100%;
+  max-height: 100%;
+  /* aspect-ratio is set inline from the frame's own dimensions (FrameView). */
+}
+
+.frame-inner > .frame-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.readouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 6px 10px;
+  background: var(--surface-0);
+  border-top: 1px solid var(--border);
+  font-family: var(--mono);
+  font-size: 0.63rem;
+  color: var(--text-dim);
+}
+.readouts b { color: var(--text); font-weight: 600; }
+
+/* ── Launch dialog ─────────────────────────────────────────────────────── */
+
+/* Centred rather than an edge drawer like the GID detail: this is a modal
+   decision — which clip, which flight log — not a record being inspected
+   alongside the map. */
+.launch-backdrop { justify-content: center; align-items: center; padding: 20px; }
+
+.launch {
+  width: min(760px, 100%);
+  max-height: min(88dvh, 820px);
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.launch-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  overflow-y: auto;
+}
+
+/* The two choices, always visible while browsing, so it is never ambiguous
+   which of them the list in the middle is currently filling. */
+.launch-picked {
+  display: grid;
+  /* Third column is the Sample button, spanning both step rows: it is not a
+     step, it is the shortcut past both of them. */
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.launch-sample {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  align-self: stretch;
+}
+
+.launch-path {
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: rtl;          /* elide from the left: the basename identifies it */
+  text-align: left;
+}
+
+.launch-warn {
+  font-size: 0.7rem;
+  line-height: 1.45;
+  color: var(--warning);
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px 10px;
+}
+
+.launch-crumbs { display: flex; align-items: center; gap: 6px; min-width: 0; }
+
+.launch-list {
+  flex: 1;
+  min-height: 180px;
+  max-height: 34dvh;
+  overflow-y: auto;
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+.launch-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  text-align: left;
+  color: var(--text);
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  padding: 7px 10px;
+  cursor: pointer;
+}
+.launch-row:hover { background: var(--surface-2); }
+.launch-row.dir { color: var(--accent); }
+.launch-row.selected { background: var(--primary); }
+.launch-row-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.launch-row-meta { color: var(--text-faint); font-size: 0.66rem; }
+
+.launch-note { padding: 14px 10px; font-size: 0.7rem; color: var(--text-faint); }
+
+.launch-opts {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 0.7rem;
+  color: var(--text-dim);
+}
+.launch-opts label { display: flex; align-items: center; gap: 6px; }
+
+.launch-num {
+  font: inherit;
+  font-family: var(--mono);
+  width: 84px;
+  color: var(--text);
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 3px 6px;
+}
+
+.launch-cfg, .launch-procs { display: flex; flex-wrap: wrap; gap: 6px; }
+.launch-cfg .chip, .launch-procs .chip { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Child stdout and stderr. Present because the first thing to go wrong on a
+   box without CUDA is an import, and an exit code alone does not say which. */
+.launch-output {
+  max-height: 22dvh;
+  overflow-y: auto;
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 8px;
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+.launch-out-line { display: flex; gap: 8px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.launch-out-proc { color: var(--text-faint); flex: none; min-width: 58px; }
+
+.launch-foot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-top: 1px solid var(--border);
+  background: var(--surface-0);
+}
+.launch-hint { font-size: 0.68rem; color: var(--text-faint); }
+
+/* The System pane's "this is a recording" banner, alongside the NO TELEM one
+   it reuses the shape of. */
+.sys-banner.replay { color: var(--accent); }
+
+/* Whitespace preserved: the relay-offline message carries the shell command
+   that fixes it, on its own line. */
+.launch-error {
+  color: var(--danger);
+  white-space: pre-wrap;
+  line-height: 1.55;
+  font-family: var(--mono);
+}
+
+/* An icon sitting inside a .btn beside its label. */
+.btn-icon { vertical-align: -1px; margin-right: 5px; }
+
+/* The map's own slot inside the raw-feeds strip, when a feed has taken the
+   main panel. .raw-feeds is a column-flow grid, so the slot is a grid item and
+   gets its width from grid-auto-columns like the feed panes beside it. */
+.raw-slot { display: flex; min-width: 0; min-height: 0; }
+.raw-slot > .pane { flex: 1; min-width: 0; }
+
+/* The map needs a definite height to lay its canvas out against. In the main
+   panel it is a direct child of a flex-column .pane and gets one; here it sits
+   inside a .pane-body, whose default `overflow: auto` would let the map size
+   itself to nothing and then scroll. */
+.raw-slot .pane-body { display: flex; overflow: hidden; }
+.raw-slot .map-wrap { flex: 1; min-width: 0; }
+
+/* Legend key for the flown path — a short line, not a dot, because that is
+   what it stands for on the map. */
+.trail-key {
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, rgb(79 195 247 / 35%), var(--accent));
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+.map-waiting span {
+  display: block;
+  margin-top: 5px;
+  font-size: 0.64rem;
+  color: var(--text-faint);
+}
+
+/* Type-a-path row in the launcher. Present because footage lives wherever it
+   lives, and clicking down from "/" to find it is a dozen round trips. */
+.launch-goto { display: flex; gap: 6px; }
+
+.launch-pathbox {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-family: var(--mono);
+  font-size: 0.68rem;
+  color: var(--text);
+  background: var(--surface-0);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+}
+.launch-pathbox::placeholder { color: var(--text-faint); }
+.launch-pathbox:focus { outline: none; border-color: var(--primary-hover); }
+
+.launch-crumbs { flex-wrap: wrap; }
