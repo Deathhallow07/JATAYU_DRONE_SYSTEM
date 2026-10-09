@@ -1,0 +1,66 @@
+# Fairness + reaction-budget overlay for the ArduPilot-OA arm of the
+# comparison. Loaded AFTER config/oa.parm, which it deliberately does not
+# modify -- that file is the shared BendyRuler setup, this one holds only the
+# choices that exist because we are comparing against Nav2.
+#
+# WHY THIS FILE EXISTS
+# The first OA run flew into block_west at (-30, 25) and crashed. The proximity
+# chain was fine (verified: /lidar/scan 403 finite returns at 5 Hz, ArduPilot
+# emitting DISTANCE_SENSOR and 80 OA-database objects). The vehicle was simply
+# going too fast to use any of it.
+
+# ---------------------------------------------------------------------------
+# Speed: match the Nav2 arm
+# ---------------------------------------------------------------------------
+# ArduCopter 4.8 renamed WPNAV_SPEED -> WP_SPD, and the units changed from cm/s
+# to m/s (AC_WPNav.cpp: _wp_speed_ms). The default is 10 m/s. Nav2's MPPI is
+# capped at vx_max/vy_max = 1.0 m/s, so the stock ArduPilot vehicle was flying
+# the same course TEN TIMES faster -- not a comparison, just a different
+# experiment. At 10 m/s the reaction budget was about a second:
+#   OA_DB_DIST_MAX 10 m  -> 1.0 s of warning
+#   OA_BR_LOOKAHEAD 8 m  -> 0.8 s
+#   PRX_FILT 0.25 Hz     -> ~0.6 s of lag on the distances themselves
+# i.e. the filtered obstacle appeared at roughly the moment of impact.
+WP_SPD           1.0
+
+# ---------------------------------------------------------------------------
+# Proximity filter
+# ---------------------------------------------------------------------------
+# oa.parm sets 0.25 Hz and its own comment says "raise toward 1.0 if BendyRuler
+# reacts too late". The scan arrives at 5 Hz, so 0.25 Hz throws away almost all
+# of it. 2.0 Hz still smooths the per-ray noise (stddev 0.02 m in the model)
+# without hiding an approaching wall.
+PRX_FILT         2.0
+
+# ---------------------------------------------------------------------------
+# Deliberately NOT changed, so the two stacks stay comparable
+# ---------------------------------------------------------------------------
+#   OA_DB_DIST_MAX 10  ~ Nav2 obstacle_max_range 8.0  (similar sensing horizon)
+#   OA_MARGIN_MAX   5  ~ Nav2 inflation_radius  4.0   (similar standoff)
+# Changing either would hand one stack an advantage the other does not have.
+
+# ---------------------------------------------------------------------------
+# THE ONE THAT MAKES OA ACTUALLY RUN
+# ---------------------------------------------------------------------------
+# GUID_OPTIONS bit 6 (64) = "Waypoint navigation used for position targets".
+#
+# Without it, a GUIDED position target from SET_POSITION_TARGET_LOCAL_NED goes
+# to ModeGuided::pos_control_start() -> SubMode::Pos, which drives pos_control
+# directly. AP_OAPathPlanner lives inside AC_WPNav::update_wpnav(), so that
+# path NEVER CONSULTS THE OBJECT AVOIDANCE PLANNER. BendyRuler is configured,
+# the proximity sensor works, the OA database fills with objects -- and the
+# vehicle flies straight through them, because nothing on that code path asks
+# the planner anything.
+#
+# With bit 6 set, ModeGuided::set_destination() takes the
+# use_wpnav_for_position_control() branch instead: SubMode::WP via
+# wp_nav->set_wp_destination_NED_m(), which does run OA.
+#   ArduCopter/mode_guided.cpp:380 and :670
+#   ArduCopter/mode.h:1213          WPNavUsedForPosControl = (1U << 6)
+#   ArduCopter/Parameters.cpp:825   GUID_OPTIONS default 0
+#
+# Diagnosed the hard way: two crashes into block_west at (-30, 25), first at
+# the 10 m/s default and again after WP_SPD was matched to Nav2's 1 m/s. The
+# speed fix above was necessary but not sufficient -- OA was never consulted
+# at either speed.
+GUID_OPTIONS     64

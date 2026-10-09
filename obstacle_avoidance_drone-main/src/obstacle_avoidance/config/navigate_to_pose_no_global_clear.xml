@@ -1,0 +1,98 @@
+<!--
+  navigate_to_pose_no_global_clear.xml
+
+  Derived from nav2's stock navigate_to_pose_w_replanning_and_recovery.xml,
+  with two deliberate removals so that an UNREACHABLE GOAL ABORTS instead of
+  looping forever. The lawnmower mission relies on that abort to skip a
+  blocked waypoint and move on to the next one.
+
+  WHAT CHANGED, AND WHY
+
+  1. ComputePathToPose is no longer wrapped in a RecoveryNode whose recovery
+     branch runs ClearEntireCostmap on global_costmap.
+
+     In the stock tree, a goal with no route (planner returns NO_VALID_PATH)
+     triggers a global costmap wipe. That erases the very obstacle proving the
+     goal is unreachable, so the next plan succeeds straight through the
+     building, the drone flies at the wall, the local costmap re-marks it, and
+     the cycle repeats indefinitely. Worse, it never aborts: RecoveryNode
+     resets its retry counter whenever its child succeeds, and the wipe
+     manufactures exactly that success. The 6-retry budget is never spent.
+
+     Here ComputePathToPose failure propagates immediately.
+
+  2. The RoundRobin recovery subtree keeps ONLY the local costmap clear and a
+     short Wait. Removed:
+       - ClearGlobalCostmap-Subtree : same unbounded-loop problem as above.
+       - Spin / BackUp              : these need an `odom` FRAME, which this
+                                      mapless stack does not publish (we only
+                                      publish an /odom TOPIC for velocity).
+                                      They fail with "Connectivity Error
+                                      looking up target frame", so they burn
+                                      retries without doing anything.
+
+     Clearing the LOCAL costmap is kept: it is a rolling window that re-marks
+     from the next scan anyway, so it recovers from transient noise without
+     destroying accumulated global knowledge.
+
+  3. number_of_retries on the outer NavigateRecovery is 2, not 6. With the
+     global wipe gone, a truly unreachable goal now fails every attempt, so
+     the counter actually counts down and the goal aborts in a few seconds
+     instead of a few minutes.
+
+  Point bt_navigator at this file with:
+      bt_navigator:
+        ros__parameters:
+          default_nav_to_pose_bt_xml: <abs path to this file>
+-->
+<root BTCPP_format="4" main_tree_to_execute="NavigateToPoseNoGlobalClear">
+  <BehaviorTree ID="NavigateToPoseNoGlobalClear">
+    <RecoveryNode number_of_retries="2" name="NavigateRecovery">
+      <PipelineSequence name="NavigateWithReplanning">
+        <ProgressCheckerSelector selected_progress_checker="{selected_progress_checker}" default_progress_checker="progress_checker" topic_name="progress_checker_selector"/>
+        <GoalCheckerSelector selected_goal_checker="{selected_goal_checker}" default_goal_checker="general_goal_checker" topic_name="goal_checker_selector"/>
+        <PathHandlerSelector selected_path_handler="{selected_path_handler}" default_path_handler="PathHandler" topic_name="path_handler_selector"/>
+        <ControllerSelector selected_controller="{selected_controller}" default_controller="FollowPath" topic_name="controller_selector"/>
+        <PlannerSelector selected_planner="{selected_planner}" default_planner="GridBased" topic_name="planner_selector"/>
+
+        <RateController hz="1.0">
+          <!-- No RecoveryNode / no global clear: a planning failure here is
+               real information and is allowed to propagate. -->
+          <Fallback name="FallbackComputePathToPose">
+            <ReactiveSequence name="CheckIfNewPathNeeded">
+              <Inverter>
+                <GlobalUpdatedGoal/>
+              </Inverter>
+              <IsGoalNearby path="{path}" proximity_threshold="4.0" max_robot_pose_search_dist="1.5"/>
+              <TruncatePathLocal input_path="{path}" output_path="{remaining_path}" distance_forward="-1" distance_backward="0.0" />
+              <ValidatePath path="{remaining_path}"/>
+            </ReactiveSequence>
+            <ComputePathToPose goal="{goal}" path="{path}" planner_id="{selected_planner}" error_code_id="{compute_path_error_code}" error_msg="{compute_path_error_msg}"/>
+          </Fallback>
+        </RateController>
+
+        <RecoveryNode number_of_retries="1" name="FollowPath">
+          <FollowPath path="{path}" controller_id="{selected_controller}" error_code_id="{follow_path_error_code}" error_msg="{follow_path_error_msg}" tracking_feedback="{tracking_feedback}"/>
+          <Sequence>
+            <WouldAControllerRecoveryHelp error_code="{follow_path_error_code}"/>
+            <ClearEntireCostmap name="ClearLocalCostmap-Context" service_name="local_costmap/clear_entirely_local_costmap"/>
+          </Sequence>
+        </RecoveryNode>
+      </PipelineSequence>
+
+      <Sequence>
+        <Fallback>
+          <WouldAControllerRecoveryHelp error_code="{follow_path_error_code}"/>
+          <WouldAPlannerRecoveryHelp error_code="{compute_path_error_code}"/>
+        </Fallback>
+        <ReactiveFallback name="RecoveryFallback">
+          <GoalUpdated/>
+          <RoundRobin name="RecoveryActions">
+            <ClearEntireCostmap name="ClearLocalCostmap-Subtree" service_name="local_costmap/clear_entirely_local_costmap"/>
+            <Wait wait_duration="3.0" error_code_id="{wait_error_code}" error_msg="{wait_error_msg}"/>
+          </RoundRobin>
+        </ReactiveFallback>
+      </Sequence>
+    </RecoveryNode>
+  </BehaviorTree>
+</root>

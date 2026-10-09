@@ -1,0 +1,421 @@
+<?xml version="1.0" ?>
+<sdf version="1.9">
+  <world name="iris_runway">
+    <physics name="1ms" type="ignore">
+      <max_step_size>0.001</max_step_size>
+      <real_time_factor>1.0</real_time_factor>
+    </physics>
+
+    <plugin filename="gz-sim-physics-system"
+      name="gz::sim::systems::Physics">
+    </plugin>
+    <plugin
+      filename="gz-sim-sensors-system"
+      name="gz::sim::systems::Sensors">
+      <render_engine>ogre2</render_engine>
+    </plugin>
+    <plugin filename="gz-sim-user-commands-system"
+      name="gz::sim::systems::UserCommands">
+    </plugin>
+    <plugin filename="gz-sim-scene-broadcaster-system"
+      name="gz::sim::systems::SceneBroadcaster">
+    </plugin>
+    <plugin filename="gz-sim-imu-system"
+      name="gz::sim::systems::Imu">
+    </plugin>
+    <plugin filename="gz-sim-navsat-system"
+      name="gz::sim::systems::NavSat">
+    </plugin>
+
+    <scene>
+      <ambient>1.0 1.0 1.0</ambient>
+      <background>0.8 0.8 0.8</background>
+      <sky></sky>
+    </scene>
+
+    <spherical_coordinates>
+      <latitude_deg>-35.363262</latitude_deg>
+      <longitude_deg>149.165237</longitude_deg>
+      <elevation>584</elevation>
+      <heading_deg>0</heading_deg>
+      <surface_model>EARTH_WGS84</surface_model>
+    </spherical_coordinates>
+
+    <light type="directional" name="sun">
+      <cast_shadows>true</cast_shadows>
+      <pose>0 0 10 0 0 0</pose>
+      <diffuse>0.8 0.8 0.8 1</diffuse>
+      <specular>0.8 0.8 0.8 1</specular>
+      <attenuation>
+        <range>1000</range>
+        <constant>0.9</constant>
+        <linear>0.01</linear>
+        <quadratic>0.001</quadratic>
+      </attenuation>
+      <direction>-0.5 0.1 -0.9</direction>
+    </light>
+
+    <model name="axes">
+      <static>1</static>
+      <link name="link">
+        <visual name="r">
+          <cast_shadows>0</cast_shadows>
+          <pose>5 0 0.1 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>10 0.01 0.01</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>1 0 0 0.8</ambient>
+            <diffuse>1 0 0 0.8</diffuse>
+            <emissive>1 0 0 0.8</emissive>
+            <specular>0.5 0.5 0.5 0.8</specular>
+          </material>
+        </visual>
+        <visual name="g">
+          <cast_shadows>0</cast_shadows>
+          <pose>0 5 0.1 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.01 10 0.01</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0 1 0 0.8</ambient>
+            <diffuse>0 1 0 0.8</diffuse>
+            <emissive>0 1 0 0.8</emissive>
+            <specular>0.5 0.5 0.5 0.8</specular>
+          </material>
+        </visual>
+        <visual name="b">
+          <cast_shadows>0</cast_shadows>
+          <pose>0 0 5.1 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.01 0.01 10</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0 0 1 0.8</ambient>
+            <diffuse>0 0 1 0.8</diffuse>
+            <emissive>0 0 1 0.8</emissive>
+            <specular>0.5 0.5 0.5 0.8</specular>
+          </material>
+        </visual>
+        <sensor name="navsat_sensor" type="navsat">
+          <always_on>1</always_on>
+          <update_rate>1</update_rate>
+        </sensor>
+      </link>
+    </model>
+
+    <model name="building">
+      <static>true</static>
+      <pose degrees="true">0 25 0 0 0 0</pose>
+      <link name="link">
+
+        <!-- Collision: main mass + roof parapet -->
+        <collision name="walls_collision">
+          <pose>0 0 5 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>12 8 10</size>
+            </box>
+          </geometry>
+        </collision>
+        <collision name="parapet_collision">
+          <pose>0 0 10.3 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>12.4 8.4 0.6</size>
+            </box>
+          </geometry>
+        </collision>
+
+        <!-- Main walls -->
+        <visual name="walls_visual">
+          <pose>0 0 5 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>12 8 10</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.62 0.61 0.58 1</ambient>
+            <diffuse>0.78 0.77 0.73 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+
+        <!-- Roof parapet -->
+        <visual name="parapet_visual">
+          <pose>0 0 10.3 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>12.4 8.4 0.6</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.35 0.35 0.35 1</ambient>
+            <diffuse>0.45 0.45 0.45 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+
+        <!-- Window bands: south face (the one the vehicle approaches) -->
+        <visual name="window_south_lower">
+          <pose>0 -4.06 3.5 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>10 0.12 1.4</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.05 0.09 0.13 1</ambient>
+            <diffuse>0.10 0.20 0.30 1</diffuse>
+            <specular>0.8 0.8 0.9 1</specular>
+          </material>
+        </visual>
+        <visual name="window_south_upper">
+          <pose>0 -4.06 7.0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>10 0.12 1.4</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.05 0.09 0.13 1</ambient>
+            <diffuse>0.10 0.20 0.30 1</diffuse>
+            <specular>0.8 0.8 0.9 1</specular>
+          </material>
+        </visual>
+
+        <!-- Window bands: north face -->
+        <visual name="window_north_lower">
+          <pose>0 4.06 3.5 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>10 0.12 1.4</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.05 0.09 0.13 1</ambient>
+            <diffuse>0.10 0.20 0.30 1</diffuse>
+            <specular>0.8 0.8 0.9 1</specular>
+          </material>
+        </visual>
+        <visual name="window_north_upper">
+          <pose>0 4.06 7.0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>10 0.12 1.4</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.05 0.09 0.13 1</ambient>
+            <diffuse>0.10 0.20 0.30 1</diffuse>
+            <specular>0.8 0.8 0.9 1</specular>
+          </material>
+        </visual>
+
+        <!-- Window bands: east and west faces -->
+        <visual name="window_east">
+          <pose>6.06 0 5.0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.12 6 1.4</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.05 0.09 0.13 1</ambient>
+            <diffuse>0.10 0.20 0.30 1</diffuse>
+            <specular>0.8 0.8 0.9 1</specular>
+          </material>
+        </visual>
+        <visual name="window_west">
+          <pose>-6.06 0 5.0 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>0.12 6 1.4</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.05 0.09 0.13 1</ambient>
+            <diffuse>0.10 0.20 0.30 1</diffuse>
+            <specular>0.8 0.8 0.9 1</specular>
+          </material>
+        </visual>
+
+        <!-- Door -->
+        <visual name="door">
+          <pose>0 -4.06 1.3 0 0 0</pose>
+          <geometry>
+            <box>
+              <size>1.8 0.12 2.6</size>
+            </box>
+          </geometry>
+          <material>
+            <ambient>0.20 0.14 0.10 1</ambient>
+            <diffuse>0.30 0.20 0.14 1</diffuse>
+            <specular>0.2 0.2 0.2 1</specular>
+          </material>
+        </visual>
+
+      </link>
+    </model>
+
+
+    <!-- ================================================================
+         Lawnmower course. Geometry here is mirrored in lawnmower.py;
+         edit both or the demo stops meaning anything.
+
+         KEEP EVERYTHING WELL INSIDE THE GLOBAL COSTMAP (+/-50 m). A building
+         at y=45 spans y 41..49 and its 4 m inflation reaches y=53, i.e. off
+         the north edge. A drone approaching along that line gets pushed away
+         from the building and straight off the map, and once the robot is
+         outside the costmap, NavFn cannot plan from its own position, so
+         EVERY later goal aborts too. Lanes now top out at y=35.
+
+           block_west   (-30, 25)  mid-lane, PASSABLE (fly around it)
+           building     (  0, 25)  mid-lane, PASSABLE (the original)
+           corner_nw    (-15, 35)  sits ON waypoint 3, UNREACHABLE
+           courtyard_se ( 15,  5)  encloses waypoint 8, UNREACHABLE
+
+         The two unreachable corners are the point of the exercise: one
+         goal buried inside a solid obstacle, one goal in open space with
+         no route to it. They fail with different planner error codes.
+         ================================================================ -->
+
+    <model name="block_west">
+      <static>true</static>
+      <pose degrees="true">-30 25 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <pose>0 0 7.0 0 0 0</pose>
+          <geometry><box><size>8 8 14.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 7.0 0 0 0</pose>
+          <geometry><box><size>8 8 14.0</size></box></geometry>
+          <material>
+            <ambient>0.62 0.61 0.58 1</ambient>
+            <diffuse>0.78 0.77 0.73 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="corner_nw">
+      <static>true</static>
+      <pose degrees="true">-15 35 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <pose>0 0 7.0 0 0 0</pose>
+          <geometry><box><size>10 6 14.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 7.0 0 0 0</pose>
+          <geometry><box><size>10 6 14.0</size></box></geometry>
+          <material>
+            <ambient>0.55 0.38 0.35 1</ambient>
+            <diffuse>0.71 0.54 0.50 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="courtyard_se_s">
+      <static>true</static>
+      <pose degrees="true">15 -0.5 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <pose>0 0 7.0 0 0 0</pose>
+          <geometry><box><size>12 1 14.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 7.0 0 0 0</pose>
+          <geometry><box><size>12 1 14.0</size></box></geometry>
+          <material>
+            <ambient>0.45 0.45 0.5 1</ambient>
+            <diffuse>0.61 0.61 0.65 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="courtyard_se_n">
+      <static>true</static>
+      <pose degrees="true">15 10.5 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <pose>0 0 7.0 0 0 0</pose>
+          <geometry><box><size>12 1 14.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 7.0 0 0 0</pose>
+          <geometry><box><size>12 1 14.0</size></box></geometry>
+          <material>
+            <ambient>0.45 0.45 0.5 1</ambient>
+            <diffuse>0.61 0.61 0.65 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="courtyard_se_w">
+      <static>true</static>
+      <pose degrees="true">9.5 5 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <pose>0 0 7.0 0 0 0</pose>
+          <geometry><box><size>1 10 14.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 7.0 0 0 0</pose>
+          <geometry><box><size>1 10 14.0</size></box></geometry>
+          <material>
+            <ambient>0.45 0.45 0.5 1</ambient>
+            <diffuse>0.61 0.61 0.65 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="courtyard_se_e">
+      <static>true</static>
+      <pose degrees="true">20.5 5 0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <pose>0 0 7.0 0 0 0</pose>
+          <geometry><box><size>1 10 14.0</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <pose>0 0 7.0 0 0 0</pose>
+          <geometry><box><size>1 10 14.0</size></box></geometry>
+          <material>
+            <ambient>0.45 0.45 0.5 1</ambient>
+            <diffuse>0.61 0.61 0.65 1</diffuse>
+            <specular>0.1 0.1 0.1 1</specular>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <include>
+      <uri>model://runway</uri>
+      <pose degrees="true">-29 545 0 0 0 363</pose>
+    </include>
+
+    <include>
+      <uri>model://iris_with_gimbal</uri>
+      <pose degrees="true">0 0 0.195 0 0 90</pose>
+    </include>
+
+  </world>
+</sdf>

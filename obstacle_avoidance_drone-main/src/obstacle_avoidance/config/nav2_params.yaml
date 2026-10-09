@@ -1,0 +1,275 @@
+amcl:
+  ros__parameters:
+    use_sim_time: true
+
+map_server:
+  ros__parameters:
+    use_sim_time: true
+
+planner_server:
+  ros__parameters:
+    use_sim_time: true
+    expected_planner_frequency: 5.0
+
+    planner_plugins: ["GridBased"]
+
+    GridBased:
+      plugin: "nav2_navfn_planner::NavfnPlanner"
+      tolerance: 0.5
+      use_astar: true
+      allow_unknown: true
+
+controller_server:
+  ros__parameters:
+    use_sim_time: true
+    controller_frequency: 20.0
+
+    controller_plugins: ["FollowPath"]
+    progress_checker_plugins: ["progress_checker"]
+    goal_checker_plugins: ["general_goal_checker"]
+
+    progress_checker:
+      plugin: "nav2_controller::SimpleProgressChecker"
+      required_movement_radius: 0.3
+      movement_time_allowance: 10.0
+
+    general_goal_checker:
+      plugin: "nav2_controller::SimpleGoalChecker"
+      xy_goal_tolerance: 0.30
+      yaw_goal_tolerance: 0.30
+      stateful: true
+
+    FollowPath:
+      plugin: "nav2_mppi_controller::MPPIController"
+
+      time_steps: 56
+      model_dt: 0.05
+      batch_size: 1000
+      iteration_count: 1
+
+      vx_std: 0.2
+      vy_std: 0.2
+      wz_std: 0.4
+
+      vx_max: 1.0
+      vx_min: -0.5
+      vy_max: 1.0
+      vy_min: -1.0
+
+      wz_max: 1.5
+      wz_min: -1.5
+
+      prune_distance: 1.7
+      transform_tolerance: 0.2
+
+      # Nav2 1.5: the motion model is a pluginlib plugin, not a string enum.
+      # `motion_model` names a parameter namespace that must carry `plugin`.
+      # Omni = holonomic (independent vx/vy/wz), which is what a multirotor is;
+      # the 1.5 default is diff_drive and would forbid the vy commands the
+      # vy_max/vy_min limits above assume.
+      motion_model: "omni"
+      omni:
+        plugin: "mppi::OmniMotionModel"
+      temperature: 0.3
+      gamma: 0.015
+
+      critics:
+        - ConstraintCritic
+        - GoalCritic
+        - GoalAngleCritic
+        - PathAlignCritic
+        - PathFollowCritic
+        - PathAngleCritic
+        - ObstaclesCritic
+        - CostCritic
+
+      ConstraintCritic:
+        enabled: true
+
+      GoalCritic:
+        enabled: true
+        cost_weight: 5.0
+
+      GoalAngleCritic:
+        enabled: true
+        cost_weight: 3.0
+
+      PathAlignCritic:
+        enabled: true
+        cost_weight: 10.0
+
+      PathFollowCritic:
+        enabled: true
+        cost_weight: 5.0
+
+      PathAngleCritic:
+        enabled: true
+        cost_weight: 2.0
+
+      ObstaclesCritic:
+        enabled: true
+        cost_weight: 30.0
+        # repulsion_weight drives the *soft* standoff: it pushes trajectories
+        # away across the whole inflation zone (inflation_radius: 4.0), so the
+        # drone settles ~4 m off obstacles rather than only dodging collisions.
+        repulsion_weight: 1.5
+        critical_weight: 20.0
+        consider_footprint: false
+        collision_cost: 10000.0
+        collision_margin_distance: 0.10
+
+      CostCritic:
+        enabled: true
+        cost_weight: 3.0
+
+local_costmap:
+  local_costmap:
+    ros__parameters:
+      use_sim_time: true
+
+      global_frame: map
+      robot_base_frame: base_link
+
+      rolling_window: true
+      width: 16
+      height: 16
+      resolution: 0.05
+
+      publish_frequency: 5.0
+      update_frequency: 10.0
+
+      transform_tolerance: 0.5
+
+      robot_radius: 0.35
+
+      plugins:
+        - obstacle_layer
+        - inflation_layer
+
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+
+        observation_sources: scan
+
+        scan:
+          topic: /lidar/scan
+          data_type: "LaserScan"
+
+          marking: true
+          clearing: true
+
+          obstacle_max_range: 8.0
+          obstacle_min_range: 0.0
+
+          raytrace_max_range: 10.0
+          raytrace_min_range: 0.0
+
+          inf_is_valid: true
+
+          expected_update_rate: 0.0
+          observation_persistence: 0.0
+
+          min_obstacle_height: -100.0
+          max_obstacle_height: 100.0
+
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        enabled: true
+        inflation_radius: 4.0
+        cost_scaling_factor: 1.0
+
+global_costmap:
+  global_costmap:
+    ros__parameters:
+      use_sim_time: true
+
+      global_frame: map
+      robot_base_frame: base_link
+
+      rolling_window: false
+      width: 100
+      height: 100
+      # The map->base_link origin is the takeoff point, so a costmap anchored
+      # at (0,0) puts the drone on its exact corner: NavFn refuses with
+      # "failed to plan from (0.00, 0.00)" and the obstacle layer logs
+      # "sensor origin out of map bounds ... cannot raytrace". Centring the
+      # 100x100 m window on takeoff gives 50 m of usable space in every
+      # direction.
+      origin_x: -50.0
+      origin_y: -50.0
+      resolution: 0.10
+
+      publish_frequency: 2.0
+      update_frequency: 2.0
+
+      transform_tolerance: 0.5
+
+      robot_radius: 0.35
+
+      plugins:
+        - obstacle_layer
+        - inflation_layer
+
+      obstacle_layer:
+        plugin: "nav2_costmap_2d::ObstacleLayer"
+        enabled: true
+
+        observation_sources: scan
+
+        scan:
+          topic: /lidar/scan
+          data_type: "LaserScan"
+
+          marking: true
+          clearing: true
+
+          obstacle_max_range: 8.0
+          obstacle_min_range: 0.0
+
+          raytrace_max_range: 6.0
+          raytrace_min_range: 0.0
+
+          inf_is_valid: true
+
+          expected_update_rate: 0.0
+          observation_persistence: 0.0
+
+          min_obstacle_height: -100.0
+          max_obstacle_height: 100.0
+
+      inflation_layer:
+        plugin: "nav2_costmap_2d::InflationLayer"
+        enabled: true
+        inflation_radius: 4.0
+        cost_scaling_factor: 1.0
+
+bt_navigator:
+  ros__parameters:
+    use_sim_time: true
+
+behavior_server:
+  ros__parameters:
+    use_sim_time: true
+
+waypoint_follower:
+  ros__parameters:
+    use_sim_time: true
+
+velocity_smoother:
+  ros__parameters:
+    use_sim_time: true
+
+lifecycle_manager:
+  ros__parameters:
+    use_sim_time: true
+    autostart: true
+
+    node_names:
+      - planner_server
+      - controller_server
+      - bt_navigator
+      - behavior_server
+      - waypoint_follower
+      - local_costmap
+      - global_costmap

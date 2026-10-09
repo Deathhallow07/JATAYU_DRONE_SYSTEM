@@ -1,0 +1,111 @@
+# BendyRuler object avoidance fed by the SF45/B gpu_lidar in the
+# iris_with_gimbal* Gazebo models, bridged in as MAVLink OBSTACLE_DISTANCE.
+#
+# Load on top of gazebo-iris-gimbal.parm:
+#   ./run_sitl.sh 0 --add-param-file=config/gazebo-iris-gimbal.parm \
+#                   --add-param-file=config/gazebo-iris-lidar-oa.parm
+#
+# Param names checked against ArduCopter 4.8-dev in ~/dev/ardupilot.
+#
+# Two independent layers are enabled here, and they cover different modes:
+#   OA_*    - path planning (BendyRuler). Only runs in AUTO / GUIDED / RTL.
+#   AVOID_* - simple "stop / slide" avoidance. Only runs in the pilot-flown
+#             modes (LOITER, ALT_HOLD, POSHOLD).
+# Enabling only one of them leaves the other set of modes unprotected, which
+# is why both are here.
+
+# ---------------------------------------------------------------------------
+# Proximity sensor: MAVLink OBSTACLE_DISTANCE from the bridge
+# ---------------------------------------------------------------------------
+# 2 = MAVLink. The bridge must send OBSTACLE_DISTANCE (or OBSTACLE_DISTANCE_3D)
+# on a channel ArduPilot is already listening on. Confirm it is landing with
+# "STATUS PRX" / the Proximity view in Mission Planner before trusting OA.
+PRX1_TYPE        2
+
+# Lidar sits upright on top of the airframe (lidar_link is +Z from base_link)
+# and is not rotated in yaw relative to the body frame.
+PRX1_ORIENT      0
+PRX1_YAW_CORR    0
+
+# Match the <range> block in models/iris_with_gimbal*/model.sdf.
+# Readings outside this band are discarded rather than treated as obstacles.
+PRX1_MIN         0.20
+PRX1_MAX         50.0
+
+# Low-pass on proximity distances. The sensor updates at 20 Hz, so 0.25 Hz is
+# heavy smoothing; raise toward 1.0 if BendyRuler reacts too late.
+PRX_FILT         0.25
+
+# The scan plane is horizontal, so it should never see the ground. Left off;
+# turn on only if you tilt the lidar.
+PRX_IGN_GND      0
+PRX_ALT_MIN      1.0
+
+# ---------------------------------------------------------------------------
+# Path planner: BendyRuler
+# ---------------------------------------------------------------------------
+# 1 = BendyRuler. (2 = Dijkstra, 3 = Dijkstra+BendyRuler; both need a polygon
+# fence to plan against, so BendyRuler alone is the right choice for a
+# lidar-only setup with no pre-mapped obstacles.)
+OA_TYPE          1
+
+# Ignore anything further away than this when planning. Well inside the 50 m
+# lidar range on purpose: planning against distant returns makes the vehicle
+# weave for obstacles it will never reach.
+OA_MARGIN_MAX    5
+
+# 1 = horizontal search. This MUST stay 1 here: the SF45/B is a single-plane
+# 320 deg scanner with one vertical sample, so a vertical search (2) would be
+# steering the vehicle using a dimension the sensor cannot see.
+OA_BR_TYPE       1
+
+# Look this far ahead along the planned path when testing for obstructions.
+OA_BR_LOOKAHEAD  8
+
+# Hysteresis: resist swapping to a new bearing unless the new path is 1.5x
+# better, and resist bearing changes larger than 75 deg. Without these the
+# planner oscillates between two equally-good ways around an obstacle.
+OA_BR_CONT_RATIO 1.5
+OA_BR_CONT_ANGLE 75
+
+# ---------------------------------------------------------------------------
+# Object database (what the proximity readings get accumulated into)
+# ---------------------------------------------------------------------------
+OA_DB_SIZE       100
+OA_DB_QUEUE_SIZE 80
+
+# Seconds an object survives with no fresh reading. Short, so obstacles behind
+# the vehicle clear out instead of walling it in.
+OA_DB_EXPIRE     10
+
+# Assumed angular width of each return, used to size the stored object.
+OA_DB_BEAM_WIDTH 5
+OA_DB_RADIUS_MIN 0.01
+
+# 0 = no distance limit on what gets stored.
+OA_DB_DIST_MAX   10
+
+# 3 = send all database items to the GCS as ADSB_VEHICLE so you can actually
+# see what the planner thinks is out there. Drop to 1 if it floods the link.
+OA_DB_OUTPUT     3
+
+# ---------------------------------------------------------------------------
+# Simple avoidance (pilot-flown modes)
+# ---------------------------------------------------------------------------
+# Bitmask: bit0 = use fence, bit1 = use proximity sensor. 3 = both.
+AVOID_ENABLE     3
+
+# 0 = slide along the obstacle. 1 = stop dead.
+AVOID_BEHAVE     0
+
+# Stand-off distance and the range at which it starts reacting.
+AVOID_MARGIN     2.0
+AVOID_DIST_MAX   5.0
+
+# Deceleration authority when backing away from something.
+AVOID_ACCEL_MAX  3.0
+AVOID_BACKUP_SPD 0.75
+
+# No altitude floor for avoidance in sim; set >0 on a real vehicle so it does
+# not fight the ground on takeoff.
+AVOID_ALT_MIN    0
